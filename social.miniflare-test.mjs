@@ -1,0 +1,5 @@
+import {Miniflare} from 'miniflare';
+import {readFileSync,readdirSync} from 'node:fs';
+import {resolve} from 'node:path';
+const mf=new Miniflare({modules:[{type:'ESModule',path:resolve('dist/server/index.js')},...readdirSync('dist/server',{recursive:true}).filter(p=>p.endsWith('.js')&&p!=='index.js').map(p=>({type:'ESModule',path:resolve('dist/server',p)}))],modulesRoot:resolve('dist/server'),modulesRules:[{type:'ESModule',include:['**/*.js','**/*.mjs']}],compatibilityDate:'2026-05-15',compatibilityFlags:['nodejs_compat'],d1Databases:['DB'],r2Buckets:['BUCKET']});
+try{const db=await mf.getD1Database('DB');for(const sql of readFileSync('drizzle/0000_naive_mach_iv.sql','utf8').split('--> statement-breakpoint').map(s=>s.trim()).filter(Boolean))await db.prepare(sql).run();globalThis.fetch=async(url,opts)=>{const r=new Request(url,opts);return mf.dispatchFetch(url,{method:r.method,headers:Object.fromEntries(r.headers),body:r.body?await r.arrayBuffer():undefined,redirect:opts?.redirect});};await import('./social.integration.mjs');}finally{await mf.dispose();}

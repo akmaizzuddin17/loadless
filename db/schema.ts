@@ -1,0 +1,6 @@
+import {sqliteTable,text,integer,primaryKey,index} from 'drizzle-orm/sqlite-core';
+export const profiles=sqliteTable('profiles',{id:text('id').primaryKey(),name:text('name').notNull(),username:text('username').notNull().unique(),created:integer('created').notNull()});
+export const posts=sqliteTable('posts',{id:text('id').primaryKey(),author:text('author').notNull().references(()=>profiles.id),body:text('body').notNull(),category:text('category').notNull(),photo:text('photo'),created:integer('created').notNull()},t=>[index('posts_created').on(t.created)]);
+export const likes=sqliteTable('likes',{post:text('post').notNull().references(()=>posts.id,{onDelete:'cascade'}),user:text('user').notNull().references(()=>profiles.id)},t=>[primaryKey({columns:[t.post,t.user]})]);
+export const comments=sqliteTable('comments',{id:text('id').primaryKey(),post:text('post').notNull().references(()=>posts.id,{onDelete:'cascade'}),author:text('author').notNull().references(()=>profiles.id),body:text('body').notNull(),created:integer('created').notNull()},t=>[index('comments_post').on(t.post,t.created)]);
+export const follows=sqliteTable('follows',{user:text('user').notNull().references(()=>profiles.id),target:text('target').notNull().references(()=>profiles.id),accepted:integer('accepted').notNull().default(0)},t=>[primaryKey({columns:[t.user,t.target]})]);

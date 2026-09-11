@@ -1,0 +1,6 @@
+import {env} from 'cloudflare:workers';
+export function storage(){const bindings=env as unknown as {DB:D1Database;BUCKET:R2Bucket};if(!bindings.DB||!bindings.BUCKET)throw new Error('Social storage is not ready');return bindings;}
+export function identity(request:Request){const id=request.headers.get('oai-authenticated-user-id');if(!id)throw new Response('Sign in to continue',{status:401});return id;}
+export function json(data:unknown,status=200){return Response.json(data,{status,headers:{'Cache-Control':'no-store'}});}
+export async function boundedBody(request:Request,limit:number){const reader=request.body?.getReader();if(!reader)throw new Response('Missing request body',{status:400});const chunks:Uint8Array[]=[];let size=0;while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>limit){await reader.cancel();throw new Response('Upload is too large',{status:413});}chunks.push(value);}const result=new Uint8Array(size);let offset=0;for(const chunk of chunks){result.set(chunk,offset);offset+=chunk.length;}return result;}
+export function fail(error:unknown){if(error instanceof Response)return error;console.error('Social request failed',error);return json({error:'Unable to connect. Your draft is safe; please try again.'},503);}
