@@ -1,0 +1,24 @@
+export const palette=['#53c4b0','#edb558','#a994ed','#75a9ed','#ed97af','#86c98c','#c6ad8a','#91a8b8'];
+export const duration=(n:number)=>[Math.floor(n/60)?`${Math.floor(n/60)}h`:'',n%60?`${n%60}m`:''].filter(Boolean).join(' ')||'0m';
+function surface(height:number){const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=height;const c=canvas.getContext('2d');if(!c)throw Error('Image unavailable');c.fillStyle='#102e35';c.fillRect(0,0,1080,height);return {canvas,c};}
+function text(c:CanvasRenderingContext2D,t:string,x:number,y:number,size=28,color='#eaf7f3',weight='400'){c.fillStyle=color;c.font=`${weight} ${size}px Arial, sans-serif`;c.fillText(t,x,y);}
+function box(c:CanvasRenderingContext2D,x:number,y:number,w:number,h:number,color:string,r=22){c.fillStyle=color;c.beginPath();c.roundRect(x,y,w,h,r);c.fill();}
+function wrap(c:CanvasRenderingContext2D,t:string,width:number){const lines:string[]=[];let line='';for(const word of t.split(/\s+/)){const next=line?line+' '+word:word;if(c.measureText(next).width>width&&line){lines.push(line);line=word;}else line=next;}if(line)lines.push(line);return lines;}
+export function recapCanvas(data:{range:string;buckets:{name:string;minutes:number}[];tasks:number;rest:number;wins:boolean;time:boolean;notes:string[];estimated:boolean}){
+ const nonzero=data.buckets.filter(b=>b.minutes);const {canvas,c}=surface(1100+Math.max(0,nonzero.length-4)*86+data.notes.length*230);
+ text(c,'LOADLESS',64,72,22,'#9bd9ca','700');text(c,data.range,64,117,24,'#afc9c9');text(c,'A week of you.',64,202,66,'#ffffff','700');
+ const total=nonzero.reduce((s,b)=>s+b.minutes,0);let angle=-Math.PI/2;
+ if(data.time){c.lineWidth=44;c.strokeStyle='#284951';c.beginPath();c.arc(278,414,134,0,Math.PI*2);c.stroke();nonzero.forEach((b,i)=>{const end=angle+b.minutes/Math.max(1,total)*Math.PI*2;c.strokeStyle=palette[data.buckets.indexOf(b)%palette.length];c.beginPath();c.arc(278,414,134,angle,end);c.stroke();angle=end;});c.textAlign='center';text(c,duration(total),278,421,43,'#fff','700');text(c,'RECORDED',278,462,18,'#afc9c9');c.textAlign='left';}
+ if(data.wins){box(c,520,290,490,118,'#20434b');text(c,String(data.tasks),554,353,48,'#fff','700');text(c,'tasks completed',660,350,24,'#b6d2cf');box(c,520,430,490,118,'#20434b');text(c,String(data.rest),554,493,48,'#fff','700');text(c,'recovery moments',660,490,24,'#b6d2cf');}
+ let y=630;if(data.time)nonzero.forEach(b=>{const i=data.buckets.indexOf(b);box(c,64,y,16,48,palette[i%palette.length],8);text(c,b.name,102,y+22,25);c.textAlign='right';text(c,duration(b.minutes),1010,y+22,25,'#fff','700');c.textAlign='left';box(c,102,y+39,908,7,'#294850',3);box(c,102,y+39,Math.max(4,b.minutes/Math.max(total,1)*908),7,palette[i%palette.length],3);y+=86;});
+ if(!data.time)y=610;for(const note of data.notes){c.font='27px Arial';const lines=wrap(c,note,860);const h=70+lines.length*37;if(y+h>canvas.height-80){text(c,'More reflections in the caption',90,y+35,24);break;}box(c,64,y,946,h,'#20434b');lines.forEach((line,i)=>text(c,line,96,y+45+i*37,27));y+=h+22;}
+ text(c,data.estimated?'Includes task estimates and automatic routine time':'Small moments count.',64,canvas.height-44,20,'#afc9c9');return canvas;
+}
+export function scheduleCanvas(date:string,rows:{start:number;end:number;title:string;category:string;kind:string;color:string}[],unplanned:number){
+ const {canvas,c}=surface(360+Math.max(rows.length,1)*116);text(c,'LOADLESS  /  DAILY PLAN',64,70,22,'#9bd9ca','700');text(c,new Date(date+'T12:00:00').toLocaleDateString(undefined,{weekday:'long'}),64,157,64,'#fff','700');text(c,new Date(date+'T12:00:00').toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'}),64,201,28,'#b6d2cf');text(c,'Routine + remaining focus blocks',64,251,23,'#b6d2cf');
+ const clock=(n:number)=>`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
+ rows.forEach((r,i)=>{const y=290+i*116;text(c,clock(r.start),64,y+40,27,'#fff','700');text(c,clock(r.end),64,y+75,22,'#afc9c9');box(c,191,y,821,98,'#20434b',18);box(c,191,y,8,98,r.color,4);c.font='bold 29px Arial';let title=r.title;while(c.measureText(title).width>620&&title.length)title=title.slice(0,-1);if(title!==r.title)title+='…';text(c,title,221,y+39,29,'#fff','700');text(c,r.kind+' · '+r.category,221,y+76,21,'#b6d2cf');c.textAlign='right';text(c,duration(r.end-r.start),984,y+39,23,r.color,'700');c.textAlign='left';});
+ if(!rows.length)text(c,'An open day. Make room for yourself.',64,327,30);
+ text(c,unplanned?duration(unplanned)+' task time still needs a slot':'Your time. At your pace.',64,canvas.height-24,20,'#afc9c9');return canvas;
+}
+export async function canvasFile(canvas:HTMLCanvasElement,name:string){const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(Error('Could not create image')),'image/png'));return new File([blob],name,{type:'image/png'});}
