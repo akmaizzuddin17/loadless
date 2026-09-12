@@ -1,5 +1,5 @@
-import {rankTasks, offsetDay, type Task, type CheckIn} from './planner';
-export type Routine = {id:string; name:string; start:string; end:string; days?:number[]; date?:string};
+import {rankTasks, offsetDay, type Task, type CheckIn, type Category} from './planner';
+export type Routine = {id:string; name:string; start:string; end:string; category?:Category; days?:number[]; date?:string};
 export const clockMinutes=(value:string)=>Number(value.slice(0,2))*60+Number(value.slice(3));
 export const clockLabel=(minutes:number)=>`${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;
 export const loadColor=(percent:number)=>`hsl(${Math.round(120*(1-Math.min(100,Math.max(0,percent))/100))} 68% 38%)`;
