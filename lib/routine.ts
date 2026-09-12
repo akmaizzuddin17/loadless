@@ -1,17 +1,18 @@
 import {rankTasks, offsetDay, type Task, type CheckIn} from './planner';
-export type Routine = {id:string; name:string; start:string; end:string};
+export type Routine = {id:string; name:string; start:string; end:string; days?:number[]; date?:string};
 export const clockMinutes=(value:string)=>Number(value.slice(0,2))*60+Number(value.slice(3));
 export const clockLabel=(minutes:number)=>`${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;
 export const loadColor=(percent:number)=>`hsl(${Math.round(120*(1-Math.min(100,Math.max(0,percent))/100))} 68% 38%)`;
-export function validRoutine(value:unknown):value is Routine[]{return Array.isArray(value)&&value.length>0&&value.every(r=>r&&typeof r.id==='string'&&typeof r.name==='string'&&r.name.trim().length>0&&r.name.length<=60&&typeof r.start==='string'&&typeof r.end==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(r.start)&&/^([01]\d|2[0-3]):[0-5]\d$/.test(r.end)&&r.start!==r.end);}
-export function freeWindows(routine:Routine[],from=0){
- const busy=routine.flatMap(r=>{const start=clockMinutes(r.start),end=clockMinutes(r.end);return end>start?[{start,end}]:[{start:0,end},{start,end:1440}];}).sort((a,b)=>a.start-b.start);
+export function validRoutine(value:unknown):value is Routine[]{return Array.isArray(value)&&value.length>0&&value.every(r=>r&&(r.days===undefined||(Array.isArray(r.days)&&r.days.length>0&&r.days.every((d:number)=>Number.isInteger(d)&&d>=0&&d<=6)))&&typeof r.id==='string'&&typeof r.name==='string'&&r.name.trim().length>0&&r.name.length<=60&&typeof r.start==='string'&&typeof r.end==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(r.start)&&/^([01]\d|2[0-3]):[0-5]\d$/.test(r.end)&&r.start!==r.end);}
+export function freeWindows(routine:Routine[],from=0,date?:string){
+ const active=(r:Routine,d:string)=>r.date?r.date===d:!r.days||r.days.includes(new Date(d+'T12:00:00').getDay());
+ const busy=routine.flatMap(r=>{const start=clockMinutes(r.start),end=clockMinutes(r.end);if(!date)return end>start?[{start,end}]:[{start:0,end},{start,end:1440}];return end>start?(active(r,date)?[{start,end}]:[]):[...(active(r,offsetDay(date,-1))?[{start:0,end}]:[]),...(active(r,date)?[{start,end:1440}]:[])];}).sort((a,b)=>a.start-b.start);
  const free:{start:number;end:number}[]=[];let cursor=from;
  for(const b of busy){if(b.start>cursor)free.push({start:cursor,end:b.start});cursor=Math.max(cursor,b.end);}
  if(cursor<1440)free.push({start:cursor,end:1440});return free;
 }
 export function routinePlan(tasks:Task[],routine:Routine[],check:CheckIn|undefined,today:string,from:number){
- const windows=routine.length?freeWindows(routine,from):[];
+ const windows=routine.length?freeWindows(routine,from,today):[];
  const available=windows.reduce((s,w)=>s+w.end-w.start,0);
  const factor=check?(check.stress>=4||check.energy<=2?.65:check.energy===3||check.stress===3?.85:1):1;
  const budget=Math.floor(available*factor),sorted=rankTasks(tasks);
