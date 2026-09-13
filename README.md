@@ -2,9 +2,13 @@
 
 A responsive student stress and workload manager created for the CodeNection prototype phase.
 
+## Vercel migration
+
+This branch runs on Next.js with Supabase Auth, PostgreSQL, and private Supabase Storage. See [DEPLOYMENT.md](DEPLOYMENT.md) for setup, privacy boundaries, verification, and existing-data migration limitations.
+
 ## Run
 
-Requires Node 22.13+ and npm. Run `npm ci`, then `npm run dev`. Build with `npm run build`. The Sites manifest identifies the private hosted project. Production output is a Cloudflare Worker.
+Requires Node 22.13+ and npm. Run `npm ci`, then `npm run dev`. Build with `npm run build`. Production output is a Next.js app for Vercel. Set the variables in `.env.example` before running, and apply the Supabase migration with `npm run db:migrate`.
 
 ## Features
 
@@ -20,7 +24,7 @@ Order incomplete tasks by deadline ascending, then priority descending, then est
 
 ## Data and demo
 
-Data is device-local in localStorage. No accounts, cross-device sync, or remote database. Empty by default; Try sample tasks adds editable sample assignments. JSON export keeps a copy but import is not implemented. A storage error is shown instead of claiming successful persistence. Sharing a browser profile shares its saved data.
+Accounts use verified Supabase sessions. Planner data is stored per user in PostgreSQL, with optimistic revisions for cross-device saves. Social profiles, posts, friends and invitations also use PostgreSQL; photos use a private Supabase Storage bucket. Empty by default; Try sample tasks adds editable sample assignments. JSON export keeps a copy but import is not implemented. A storage error is shown instead of claiming successful persistence. Sharing a browser profile shares its saved data.
 
 ## Validation
 
